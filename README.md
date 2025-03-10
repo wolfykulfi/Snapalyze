@@ -2,7 +2,7 @@
 
 Snapalyze is a web application that uses Google's Gemini AI to analyze and provide detailed descriptions of images. Simply upload an image, provide instructions for analysis, and get AI-generated insights about your image.
 
-![Snapalyze Screenshot](https://i.imgur.com/placeholder.png)
+
 
 ## Features
 
