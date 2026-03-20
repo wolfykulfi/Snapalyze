@@ -1,196 +1,183 @@
-import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from "@google/generative-ai";
+import Groq from 'groq-sdk';
 import MarkdownIt from 'markdown-it';
-import { maybeShowApiKeyBanner } from './gemini-api-banner';
 import './style.css';
 
-// Replace with your actual API key
-let API_KEY = 'AIzaSyAcBuhZc1E1vo54RuqP_EZKBPd4tv8N_rE'; // Replace with your key
+// ─── API Key ──────────────────────────────────────────────────
+let API_KEY = import.meta.env.VITE_GROQ_API_KEY || localStorage.getItem('groq_api_key');
 
-// DOM Elements
-const form = document.querySelector('#analysisForm');
-const promptInput = document.querySelector('#promptInput');
-const output = document.querySelector('.output');
-const fileInput = document.getElementById('fileInput');
-const imagePreview = document.getElementById('imagePreview');
-const fileName = document.getElementById('fileName');
-const loadingIndicator = document.getElementById('loadingIndicator');
-const copyBtn = document.getElementById('copyBtn');
-const suggestionChips = document.querySelectorAll('.suggestion-chip');
-const aboutLink = document.getElementById('aboutLink');
-const aboutModal = document.getElementById('aboutModal');
-const closeButton = document.querySelector('.close-button');
-const analyzeBtn = document.getElementById('analyzeBtn');
+// ─── DOM ──────────────────────────────────────────────────────
+const form            = document.getElementById('analysisForm');
+const promptInput     = document.getElementById('promptInput');
+const output          = document.getElementById('output');
+const fileInput       = document.getElementById('fileInput');
+const imagePreview    = document.getElementById('imagePreview');
+const previewContainer= document.getElementById('previewContainer');
+const fileBadge       = document.getElementById('fileBadge');
+const fileName        = document.getElementById('fileName');
+const fileClear       = document.getElementById('fileClear');
+const uploadZone      = document.getElementById('uploadZone');
+const loadingIndicator= document.getElementById('loadingIndicator');
+const copyBtn         = document.getElementById('copyBtn');
+const analyzeBtn      = document.getElementById('analyzeBtn');
+const apiKeyContainer = document.getElementById('apiKeyContainer');
+const apiKeyInput     = document.getElementById('apiKeyInput');
+const saveApiKeyBtn   = document.getElementById('saveApiKeyBtn');
+const aboutLink       = document.getElementById('aboutLink');
+const aboutModal      = document.getElementById('aboutModal');
+const closeAbout      = document.getElementById('closeAbout');
 
-// Initialize markdown parser
-const md = new MarkdownIt({
-  linkify: true,
-  typographer: true,
-  breaks: true,
-  html: true
-});
+const md = new MarkdownIt({ linkify: true, typographer: true, breaks: true });
 
-// File input change handler
-fileInput.addEventListener('change', (event) => {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-
-        reader.onload = (e) => {
-            imagePreview.src = e.target.result;
-            imagePreview.style.display = 'block';
-            fileName.textContent = file.name;
-        }
-
-        reader.readAsDataURL(file);
-    } else {
-        imagePreview.src = "#";
-        imagePreview.style.display = "none";
-        fileName.textContent = "";
+// ─── Upload / Preview ─────────────────────────────────────────
+uploadZone.addEventListener('dragover',  (e) => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', ()  => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file?.type.startsWith('image/')) {
+        fileInput.files = e.dataTransfer.files;
+        loadPreview(file);
     }
 });
 
-// Suggestion chips click handler
-suggestionChips.forEach(chip => {
+fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    file ? loadPreview(file) : clearPreview();
+});
+
+fileClear.addEventListener('click', (e) => {
+    e.stopPropagation();
+    fileInput.value = '';
+    clearPreview();
+});
+
+function loadPreview(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        imagePreview.src = e.target.result;
+        imagePreview.style.display = 'block';
+        previewContainer.querySelector('.preview-placeholder').style.display = 'none';
+        fileName.textContent = file.name;
+        uploadZone.classList.add('has-file');
+    };
+    reader.readAsDataURL(file);
+}
+
+function clearPreview() {
+    imagePreview.src = '#';
+    imagePreview.style.display = 'none';
+    previewContainer.querySelector('.preview-placeholder').style.display = 'flex';
+    fileName.textContent = '';
+    uploadZone.classList.remove('has-file');
+}
+
+// ─── Suggestion Chips ─────────────────────────────────────────
+document.querySelectorAll('.chip').forEach(chip => {
     chip.addEventListener('click', () => {
-        promptInput.value = chip.getAttribute('data-prompt');
+        promptInput.value = chip.dataset.prompt;
         promptInput.focus();
     });
 });
 
-// Copy button click handler
+// ─── Copy ─────────────────────────────────────────────────────
 copyBtn.addEventListener('click', () => {
-    const textToCopy = output.textContent;
-    navigator.clipboard.writeText(textToCopy)
-        .then(() => {
-            // Show temporary success message
-            const originalText = copyBtn.innerHTML;
-            copyBtn.innerHTML = '<i class="fas fa-check"></i>';
-            setTimeout(() => {
-                copyBtn.innerHTML = originalText;
-            }, 2000);
-        })
-        .catch(err => {
-            console.error('Failed to copy text: ', err);
-        });
+    navigator.clipboard.writeText(output.innerText).then(() => {
+        const orig = copyBtn.innerHTML;
+        copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+        copyBtn.classList.add('copied');
+        setTimeout(() => { copyBtn.innerHTML = orig; copyBtn.classList.remove('copied'); }, 2000);
+    });
 });
 
-// Modal handlers
-aboutLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    aboutModal.style.display = 'flex';
-});
-
-closeButton.addEventListener('click', () => {
-    aboutModal.style.display = 'none';
-});
-
+// ─── Modals ───────────────────────────────────────────────────
+aboutLink.addEventListener('click', () => { aboutModal.style.display = 'flex'; });
+closeAbout.addEventListener('click', () => { aboutModal.style.display = 'none'; });
 window.addEventListener('click', (e) => {
-    if (e.target === aboutModal) {
-        aboutModal.style.display = 'none';
-    }
+    if (e.target === aboutModal) aboutModal.style.display = 'none';
+    if (e.target === apiKeyContainer) apiKeyContainer.style.display = 'none';
 });
 
-// Form submission handler
-form.addEventListener('submit', async (ev) => {
-    ev.preventDefault();
-    
-    // Validate inputs
+// ─── Form Submit ──────────────────────────────────────────────
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
     const file = fileInput.files[0];
-    if (!file) {
-        showError("Please select an image to analyze.");
-        return;
-    }
-    
-    // Show loading state
-    showLoading(true);
-    output.textContent = '';
-    analyzeBtn.disabled = true;
-    
+    if (!file) { showError('Please select an image first.'); return; }
+    if (!API_KEY) { apiKeyContainer.style.display = 'flex'; return; }
+
+    setLoading(true);
+    output.innerHTML = '';
+
     try {
-        const imageBase64 = await readFileAsBase64(file);
-        const prompt = promptInput.value.trim() || "Describe this image in detail";
+        const base64  = await readAsBase64(file);
+        const prompt  = promptInput.value.trim() || 'Describe this image in detail.';
 
-        // Prepare request for Gemini API
-        let contents = [
-            {
+        const groq   = new Groq({ apiKey: API_KEY, dangerouslyAllowBrowser: true });
+        const stream = await groq.chat.completions.create({
+            model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+            messages: [{
                 role: 'user',
-                parts: [
-                    { inline_data: { mime_type: file.type, data: imageBase64 } },
-                    { text: prompt }
-                ]
-            }
-        ];
-
-        // Initialize Gemini API
-        const genAI = new GoogleGenerativeAI(API_KEY);
-        const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash",
-            safetySettings: [
-                {
-                    category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-                    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-                },
-                {
-                    category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-                    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-                },
-                {
-                    category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-                    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-                },
-                {
-                    category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-                    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-                },
-            ],
+                content: [
+                    { type: 'image_url', image_url: { url: `data:${file.type};base64,${base64}` } },
+                    { type: 'text', text: prompt },
+                ],
+            }],
+            stream: true,
         });
 
-        // Generate content with streaming response
-        const result = await model.generateContentStream({ contents });
-
-        let buffer = [];
-        for await (let response of result.stream) {
-            buffer.push(response.text());
-            output.innerHTML = md.render(buffer.join(''));
+        let buffer = '';
+        for await (const chunk of stream) {
+            const delta = chunk.choices[0]?.delta?.content || '';
+            if (delta) {
+                buffer += delta;
+                output.innerHTML = md.render(buffer);
+                output.scrollTop = output.scrollHeight;
+            }
         }
-    } catch (e) {
-        showError(`Error: ${e.message}`);
-        console.error("Error:", e);
+    } catch (err) {
+        showError(err.message);
+        if (err.message.includes('401') || err.message.toLowerCase().includes('api key')) {
+            apiKeyContainer.style.display = 'flex';
+        }
     } finally {
-        showLoading(false);
-        analyzeBtn.disabled = false;
+        setLoading(false);
     }
 });
 
-// Helper functions
-function readFileAsBase64(file) {
+// ─── Keyboard Shortcut ────────────────────────────────────────
+promptInput.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'Enter') form.dispatchEvent(new Event('submit'));
+});
+
+// ─── API Key Save ─────────────────────────────────────────────
+saveApiKeyBtn.addEventListener('click', () => {
+    const key = apiKeyInput.value.trim();
+    if (key) {
+        localStorage.setItem('groq_api_key', key);
+        API_KEY = key;
+        apiKeyContainer.style.display = 'none';
+    }
+});
+
+if (!API_KEY) apiKeyContainer.style.display = 'flex';
+
+// ─── Helpers ──────────────────────────────────────────────────
+function readAsBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => {
-            const base64String = reader.result.split(',')[1];
-            resolve(base64String);
-        };
+        reader.onload  = () => resolve(reader.result.split(',')[1]);
         reader.onerror = reject;
         reader.readAsDataURL(file);
     });
 }
 
-function showError(message) {
-    output.innerHTML = `<div style="color: var(--danger-color); padding: 10px; border-left: 4px solid var(--danger-color);">
-        <i class="fas fa-exclamation-circle"></i> ${message}
-    </div>`;
+function showError(msg) {
+    output.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-circle"></i> ${msg}</div>`;
 }
 
-function showLoading(isLoading) {
-    loadingIndicator.style.display = isLoading ? 'flex' : 'none';
+function setLoading(on) {
+    loadingIndicator.style.display = on ? 'flex' : 'none';
+    analyzeBtn.disabled = on;
+    copyBtn.style.visibility = on ? 'hidden' : 'visible';
 }
-
-// Check API key on load
-maybeShowApiKeyBanner(API_KEY);
-
-// Add keyboard shortcut for form submission (Ctrl+Enter)
-promptInput.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.key === 'Enter') {
-        form.dispatchEvent(new Event('submit'));
-    }
-});
