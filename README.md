@@ -1,83 +1,110 @@
-﻿# Snapalyze - AI Image Analysis Tool
+# Snapalyze — AI Image Analysis
 
-Snapalyze is a web application that uses Google's Gemini AI to analyze and provide detailed descriptions of images. Simply upload an image, provide instructions for analysis, and get AI-generated insights about your image.
+> Upload any image. Ask anything. Get instant AI-powered insights — for free.
 
+Snapalyze uses **Llama 4 Scout** via **Groq** to analyse images at blazing speed with no cost. Simply upload an image, give it instructions, and get rich markdown-formatted results in seconds.
 
+---
 
 ## Features
 
-- **Image Analysis**: Upload any image and get AI-powered analysis and descriptions
-- **Custom Instructions**: Specify exactly what you want to know about the image
-- **Quick Suggestions**: Use pre-defined prompt suggestions for common analysis tasks
-- **Markdown Support**: Results are rendered with full markdown support for rich formatting
-- **Copy to Clipboard**: Easily copy analysis results with one click
-- **Responsive Design**: Works on desktop and mobile devices
-- **User-Friendly Interface**: Modern, intuitive UI with real-time feedback
+- **Vision AI** — Powered by Meta's Llama 4 Scout model via Groq's ultra-fast inference
+- **Streaming responses** — Results appear word-by-word in real time
+- **Drag & drop upload** — Drop images directly onto the upload zone
+- **Prompt suggestions** — One-click chips for common analysis tasks
+- **Markdown output** — Responses rendered with full markdown support
+- **Copy to clipboard** — Copy results with one click
+- **Local API key storage** — Key saved in browser localStorage, never sent anywhere else
+- **Fully responsive** — Works on desktop and mobile
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Build tool | [Vite](https://vitejs.dev/) |
+| AI inference | [Groq](https://groq.com/) |
+| Vision model | Llama 4 Scout (`meta-llama/llama-4-scout-17b-16e-instruct`) |
+| Markdown | [markdown-it](https://github.com/markdown-it/markdown-it) |
+| Icons | [Font Awesome 6](https://fontawesome.com/) |
+| Font | [Inter](https://fonts.google.com/specimen/Inter) |
+
+---
 
 ## Getting Started
 
-### Prerequisites
+### 1. Clone the repo
 
-- Node.js (v14 or higher)
-- A Google Gemini API key (get one at [Google AI Studio](https://ai.google.dev/))
+```bash
+git clone https://github.com/wolfykulfi/Snapalyze.git
+cd Snapalyze
+```
 
-### Installation
+### 2. Install dependencies
 
-1. Clone the repository:
-   ```
-   git clone https://github.com/yourusername/snapalyze.git
-   cd snapalyze
-   ```
+```bash
+npm install
+```
 
-2. Install dependencies:
-   ```
-   npm install
-   ```
+### 3. Get a free Groq API key
 
-3. Add your Gemini API key:
-   Open `main.js` and replace the placeholder API key with your own:
-   ```javascript
-   let API_KEY = 'YOUR_API_KEY_HERE';
-   ```
+Sign up at [console.groq.com](https://console.groq.com/keys) — it's free, no credit card required.
 
-4. Start the development server:
-   ```
-   npm run dev
-   ```
+### 4. Add your API key
 
-5. Open your browser and navigate to the URL shown in your terminal (typically http://localhost:5173)
+Create a `.env` file in the root:
+
+```env
+VITE_GROQ_API_KEY=gsk_your_key_here
+```
+
+Or just enter it directly in the app when prompted — it'll be saved to your browser.
+
+### 5. Run the dev server
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+---
 
 ## Usage
 
-1. Click the upload area or drag and drop an image file
-2. Enter instructions for how you want the image analyzed (or use a suggestion chip)
-3. Click "Analyze Image" and wait for the results
-4. View the detailed analysis provided by the AI
-5. Use the copy button to copy the results to your clipboard
+1. Drag & drop an image onto the upload zone, or click to browse
+2. Type your instructions — or click a suggestion chip
+3. Hit **Analyze Image** (or press `Ctrl + Enter`)
+4. Watch the AI response stream in real time
+5. Copy the result with the copy button
 
-## Example Prompts
+### Example prompts
 
-- "Describe everything you see in this image"
-- "Identify all objects in this image"
-- "What's unusual or interesting about this image?"
-- "Analyze the composition and visual elements of this photograph"
-- "What emotions does this image convey?"
-- "Identify any text visible in this image"
-- "Describe the setting and time period of this image"
+- *Describe everything you see in this image in detail*
+- *Identify and list all objects*
+- *What emotions or mood does this image convey?*
+- *Extract any visible text*
+- *Analyze the colors, composition, and visual style*
 
-## Technologies Used
+---
 
-- [Vite](https://vitejs.dev/) - Frontend build tool
-- [Google Gemini API](https://ai.google.dev/) - AI image analysis
-- [Markdown-it](https://github.com/markdown-it/markdown-it) - Markdown rendering
-- [Font Awesome](https://fontawesome.com/) - Icons
+## Scripts
 
+```bash
+npm run dev      # Start development server
+npm run build    # Production build
+npm run preview  # Preview production build locally
+```
 
-## Acknowledgments
+---
 
-- Google Gemini API for providing the AI capabilities
-- The open-source community for the amazing tools and libraries
+## Privacy
 
-## Privacy Notice
+Images are converted to base64 in your browser and sent directly to Groq's API for inference. They are **not stored** on any server. Your API key is kept only in your browser's `localStorage`.
 
-Snapalyze processes images client-side and sends them to Google's Gemini API for analysis. Images are not stored permanently on any server. Please review Google's privacy policy for information on how they handle data sent to their API.
+---
+
+## License
+
+MIT
